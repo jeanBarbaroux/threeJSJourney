@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
-import CANNON from 'cannon'
+import * as CANNON from 'cannon-es'
 
 /**
  * Debug
@@ -47,6 +47,8 @@ const defaultContactMaterial = new CANNON.ContactMaterial(
 
 world.addContactMaterial(defaultContactMaterial)
 world.defaultContactMaterial = defaultContactMaterial
+world.broadphase = new CANNON.SAPBroadphase(world)
+world.allowSleep = true
 
 const floorShape = new CANNON.Plane()
 const floorBody = new CANNON.Body()
@@ -125,7 +127,7 @@ controls.enableDamping = true
 
 /**
  * Renderer
- */
+*/
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas
 })
@@ -133,6 +135,18 @@ renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
+const hitSound = new Audio('./sounds/hit.mp3')
+
+const playHitSound = (collision) => {
+    const impactStrength = collision.contact.getImpactVelocityAlongNormal()
+
+    if (impactStrength > 1.5) {
+        hitSound.currentTime = 0
+        hitSound.volume = Math.random()
+        hitSound.play()
+    }
+}
 
 //utils
 const objectsToUpdate = []
@@ -161,6 +175,7 @@ const createSphere = (radius, position) => {
         material: defaultMaterial
     })
     body.position.copy(position)
+    body.addEventListener('collide', playHitSound)
     world.addBody(body)
     objectsToUpdate.push({
         mesh,
@@ -191,6 +206,7 @@ const createBox = (width, height, depth, position) => {
         material: defaultMaterial
     })
     body.position.copy(position)
+    body.addEventListener('collide', playHitSound)
     world.addBody(body)
     objectsToUpdate.push({
         mesh,
@@ -220,8 +236,18 @@ debugObject.createBox = () => {
             z: (Math.random() - 0.5) * 3
         })
 }
+
+debugObject.reset = () => {
+    for (const object of objectsToUpdate) {
+        object.body.removeEventListener('collide', playHitSound)
+        world.removeBody(object.body)
+        scene.remove(object.mesh)
+    }
+    objectsToUpdate.splice(0, objectsToUpdate.length)
+}
 gui.add(debugObject, 'createSphere')
 gui.add(debugObject, 'createBox')
+gui.add(debugObject, 'reset')
 
 
 /**
