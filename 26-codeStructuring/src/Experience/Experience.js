@@ -1,9 +1,18 @@
+import Camera from "./Camera"
+import Renderer from "./Renderer"
 import Sizes from "./utils/Size"
 import Time from "./utils/Time"
 import * as THREE from 'three'
 
+let instance = null
+
 export default class Experience {
     constructor(canvas) {
+        if (instance)
+            return instance
+
+        instance = this
+
         //permet d’acceder à la classe depuis la console, pas hyper utile a priori ?
         window.experience = this
 
@@ -11,6 +20,8 @@ export default class Experience {
         this.sizes = new Sizes()
         this.time = new Time()
         this.scene = new THREE.Scene()
+        this.camera = new Camera()
+        this.renderer = new Renderer()
 
         //sizes resize event
         this.sizes.on('resize', () => {
@@ -23,7 +34,13 @@ export default class Experience {
         })
     }
 
-    resize() {}
+    resize() {
+        this.camera.resize()
+        this.renderer.resize()
+    }
 
-    update() {}
+    update() {
+        this.camera.update()
+        this.renderer.update()
+    }
 }
