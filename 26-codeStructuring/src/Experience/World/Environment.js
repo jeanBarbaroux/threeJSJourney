@@ -5,9 +5,17 @@ export default class Environment {
     constructor() {
         this.experience = new Experience()
         this.scene = this.experience.scene
+        this.resources = this.experience.resources
+        this.debug = this.experience.debug
+
+        if (this.debug.active) {
+            this.debugFolder = this.debug.ui.addFolder('environment')
+        }
 
         this.setSunLight()
+        this.setEnvironmentMap()
     }
+
 
     setSunLight() {
         this.sunLight = new THREE.DirectionalLight('#ffffff', 4)
@@ -17,5 +25,59 @@ export default class Environment {
         this.sunLight.shadow.normalBias = 0.05
         this.sunLight.position.set(3.5, 3, - 2.25)
         this.scene.add(this.sunLight)
+
+        if (this.debug.active) {
+            this.debugFolder.add(this.sunLight, 'intensity')
+                .name('sunLightIntesity')
+                .min(0)
+                .max(10)
+                .step(0.001)
+
+            this.debugFolder.add(this.sunLight.position, 'x')
+                .name('x')
+                .min(-10)
+                .max(10)
+                .step(0.001)
+
+            this.debugFolder.add(this.sunLight.position, 'y')
+                .name('y')
+                .min(-10)
+                .max(10)
+                .step(0.001)
+
+            this.debugFolder.add(this.sunLight.position, 'z')
+                .name('z')
+                .min(-10)
+                .max(10)
+                .step(0.001)
+        }
+    }
+
+    setEnvironmentMap() {
+        this.environmentMap = {}
+        this.environmentMap.intensity = 0.4
+        this.environmentMap.texture = this.resources.items.environmentMapTexture
+        this.environmentMap.texture.encoding = THREE.SRGBColorSpace
+
+        this.scene.environment = this.environmentMap.texture
+
+        this.environmentMap.updateMaterials = () => {
+            this.scene.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+                    child.material.envMap = this.environmentMap.texture
+                    child.material.envMapIntensity = this.environmentMap.intensity
+                    child.material.needsUpdate = true
+                }
+            })
+        }
+
+        if (this.debug.active) {
+            this.debugFolder.add(this.environmentMap, 'intensity')
+                .name('envMapIntensity')
+                .min(0)
+                .max(4)
+                .step(0.001)
+                .onChange(this.environmentMap.updateMaterials)
+        }
     }
 }
