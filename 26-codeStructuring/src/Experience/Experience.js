@@ -4,6 +4,9 @@ import Sizes from "./utils/Size"
 import Time from "./utils/Time"
 import * as THREE from 'three'
 import World from "./World/World"
+import Resources from "./utils/Resources"
+
+import sources from './sources'
 
 let instance = null
 
@@ -23,6 +26,7 @@ export default class Experience {
         this.scene = new THREE.Scene()
         this.camera = new Camera()
         this.renderer = new Renderer()
+        this.resources = new Resources(sources)
         this.world = new World()
 
         //sizes resize event
