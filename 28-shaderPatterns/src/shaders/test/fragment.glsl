@@ -80,11 +80,29 @@ void main()
     //float strength = random(vUv);
 
     //pattern 24
-    vec2 pattern = vec2(
-        floor(vUv.x * 10.0) / 10.0,
-        floor(vUv.y * 10.0) / 10.0
-    );
-    float strength = random(pattern);
+//    vec2 pattern = vec2(
+//        floor(vUv.x * 10.0) / 10.0,
+//        floor(vUv.y * 10.0) / 10.0
+//    );
+//    float strength = random(pattern);
+
+    //pattern 25
+//    vec2 pattern = vec2(
+//        floor(vUv.x * 10.0) / 10.0,
+//        floor((vUv.y + vUv.x * 0.5) * 10.0) / 10.0
+//    );
+//    float strength = random(pattern);
+
+    //pattern 26
+//    float strength = length(vUv) ;
+
+    //pattern 27
+//    float strength = length(vec2(vUv.x - 0.5, vUv.y - 0.5));
+//     ou
+//    float strength = distance(vUv, vec2(0.5));
+
+    //pattern 28
+    float strength = 1.0 - distance(vUv, vec2(0.5));
 
     gl_FragColor = vec4(vec3(strength), 1.0);
 }
