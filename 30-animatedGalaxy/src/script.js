@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
+import galaxyVertexShader from '/shaders/vertex.glsl'
+import galaxyFragmentShader from '/shaders/fragment.glsl'
 
 /**
  * Base
@@ -48,6 +50,7 @@ const generateGalaxy = () =>
 
     const positions = new Float32Array(parameters.count * 3)
     const colors = new Float32Array(parameters.count * 3)
+    const scales = new  Float32Array(parameters.count);
 
     const insideColor = new THREE.Color(parameters.insideColor)
     const outsideColor = new THREE.Color(parameters.outsideColor)
@@ -76,6 +79,8 @@ const generateGalaxy = () =>
         colors[i3    ] = mixedColor.r
         colors[i3 + 1] = mixedColor.g
         colors[i3 + 2] = mixedColor.b
+
+        scales[i] = Math.random()
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
@@ -84,13 +89,18 @@ const generateGalaxy = () =>
     /**
      * Material
      */
-    material = new THREE.PointsMaterial({
-        size: parameters.size,
-        sizeAttenuation: true,
+    material = new THREE.ShaderMaterial({
+        vertexShader: galaxyVertexShader,
+        fragmentShader: galaxyFragmentShader,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
-        vertexColors: true
+        vertexColors: true,
+        uniforms: {
+            uSize: {value: 8}
+        }
     })
+
+    gui.add(material.uniforms.uSize, 'value').min(0).max(20).step(0.001)
 
     /**
      * Points
