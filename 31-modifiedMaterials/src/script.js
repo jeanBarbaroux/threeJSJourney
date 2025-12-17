@@ -69,11 +69,78 @@ const material = new THREE.MeshStandardMaterial( {
     normalMap: normalTexture
 })
 
+const depthMaterial = new THREE.MeshDepthMaterial({
+    depthPacking: THREE.RGBADepthPacking
+})
+
+const customUniform = {
+    uTime: {value: 0}
+}
+
 material.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = customUniform.uTime;
+
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `
+        #include <common>
+        
+        uniform float uTime;
+                    
+        mat2 get2dRotateMatrix(float _angle) 
+        {
+            return mat2(cos(_angle), - sin(_angle), sin(_angle), cos(_angle));
+        }
+        `
+    )
+
     shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
         `
             #include <begin_vertex>
+            
+            float angle = uTime;
+            mat2 rotateMatrix = get2dRotateMatrix(angle);
+            transformed.xz = transformed.xz * rotateMatrix;
+        `);
+}
+
+depthMaterial.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = customUniform.uTime;
+
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `
+        #include <common>
+        
+        uniform float uTime;
+                    
+        mat2 get2dRotateMatrix(float _angle) 
+        {
+            return mat2(cos(_angle), - sin(_angle), sin(_angle), cos(_angle));
+        }
+        `
+    )
+
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <beginnormal_vertex>',
+        `
+        #include <beginnormal_vertex>
+        
+            float angle = uTime;
+            mat2 rotateMatrix = get2dRotateMatrix(angle);
+            objectNormal.xz = objectNormal.xz * rotateMatrix;
+        `
+    )
+
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `
+            #include <begin_vertex>
+            
+            float angle = uTime;
+            mat2 rotateMatrix = get2dRotateMatrix(angle);
+            transformed.xz = transformed.xz * rotateMatrix;
         `);
 }
 
@@ -88,12 +155,22 @@ gltfLoader.load(
         const mesh = gltf.scene.children[0]
         mesh.rotation.y = Math.PI * 0.5
         mesh.material = material
+        mesh.customDepthMaterial = depthMaterial;
         scene.add(mesh)
 
         // Update materials
         updateAllMaterials()
     }
 )
+
+const meshPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(15,15, 15),
+    new THREE.MeshStandardMaterial({color: '#ff0000'})
+)
+meshPlane.rotation.x =  Math.PI
+meshPlane.position.x = - 5
+meshPlane.position.z = 5
+scene.add(meshPlane)
 
 /**
  * Lights
@@ -163,6 +240,7 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    customUniform.uTime.value = elapsedTime;
 
     // Update controls
     controls.update()
