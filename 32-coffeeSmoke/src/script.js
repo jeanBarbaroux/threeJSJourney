@@ -85,10 +85,19 @@ const smokeGeometry = new THREE.PlaneGeometry(1, 1, 16, 64)
 smokeGeometry.translate(0,0.5, 0)
 smokeGeometry.scale(1.5, 6, 1.5)
 
+const perlinTexture = textureLoader.load('./perlin.png')
+perlinTexture.wrapS = THREE.RepeatWrapping;
+perlinTexture.wrapT = THREE.RepeatWrapping;
+
 const smokeMaterial = new THREE.ShaderMaterial({
     vertexShader: coffeeVertexShader,
     fragmentShader: coffeeFragmentShader,
-    side: THREE.DoubleSide
+    side: THREE.DoubleSide,
+    transparent: true,
+    uniforms: {
+        uTime: new THREE.Uniform(0),
+        uPerlinTexture: new THREE.Uniform(perlinTexture),
+    }
 })
 
 const smoke = new  THREE.Mesh(smokeGeometry,smokeMaterial)
@@ -103,6 +112,7 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    smokeMaterial.uniforms.uTime.value = elapsedTime;
 
     // Update controls
     controls.update()
