@@ -9,7 +9,7 @@ void main() {
     smokeUv.y *= 0.3;
     smokeUv.y -= uTime * 0.03;
 
-    float smoke = smoothstep(0.4, 1.0,texture(uPerlinTexture, smokeUv).r);
+    float smoke = smoothstep(0.4, 1.0,texture(uPerlinTexture, smokeUv).g);
 
     smoke *= smoothstep(0.0,0.1,vUv.x);
     smoke *= smoothstep(1.0,0.9,vUv.x);
