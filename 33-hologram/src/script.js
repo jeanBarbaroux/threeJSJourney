@@ -2,6 +2,9 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import GUI from 'lil-gui'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import hologramVertexShader from './shaders/vertex.glsl'
+import hologramFragmentShader from './shaders/fragment.glsl'
+
 
 /**
  * Base
@@ -59,6 +62,9 @@ controls.enableDamping = true
 const rendererParameters = {}
 rendererParameters.clearColor = '#1d1f2a'
 
+const materialParameters = {}
+materialParameters.hologramColor = '#00ffff'
+
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     antialias: true
@@ -77,7 +83,25 @@ gui
 /**
  * Material
  */
-const material = new THREE.MeshBasicMaterial()
+const material = new THREE.ShaderMaterial({
+    vertexShader: hologramVertexShader,
+    fragmentShader: hologramFragmentShader,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+        uTime: new THREE.Uniform(0),
+        uColor: new THREE.Uniform(new THREE.Color(materialParameters.hologramColor))
+    },
+})
+
+gui
+    .addColor(materialParameters, 'hologramColor')
+    .onChange(() =>
+    {
+        material.uniforms.uColor.value = new THREE.Color(materialParameters.hologramColor)
+    })
 
 /**
  * Objects
@@ -122,6 +146,7 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    material.uniforms.uTime.value = elapsedTime
 
     // Rotate objects
     if(suzanne)
