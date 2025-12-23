@@ -93,6 +93,16 @@ gui
         material.uniforms.uColor.value.set(materialParameters.color)
     })
 
+const directionalLightHelper = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({
+        color: "#0000FF",
+        side: THREE.DoubleSide
+    })
+)
+directionalLightHelper.position.set(0,0,3)
+scene.add(directionalLightHelper)
+
 /**
  * Objects
  */
