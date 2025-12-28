@@ -4,9 +4,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import GUI from 'lil-gui'
 import gsap from 'gsap'
-console.log('ok')
 import particlesVertexShader from './shaders/particles/vertex.glsl'
 import particlesFragmentShader from './shaders/particles/fragment.glsl'
+import Buffer from "three/src/renderers/common/Buffer.js";
+import {BufferGeometry} from "three";
 
 /**
  * Base
@@ -44,7 +45,8 @@ window.addEventListener('resize', () =>
     sizes.pixelRatio = Math.min(window.devicePixelRatio, 2)
 
     // Materials
-    particles.material.uniforms.uResolution.value.set(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio)
+    if (particles)
+        particles.material.uniforms.uResolution.value.set(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio)
 
     // Update camera
     camera.aspect = sizes.width / sizes.height
@@ -85,25 +87,68 @@ renderer.setClearColor(debugObject.clearColor)
 /**
  * Particles
  */
-const particles = {}
-
-// Geometry
-particles.geometry = new THREE.SphereGeometry(3)
-
-// Material
-particles.material = new THREE.ShaderMaterial({
-    vertexShader: particlesVertexShader,
-    fragmentShader: particlesFragmentShader,
-    uniforms:
-    {
-        uSize: new THREE.Uniform(0.4),
-        uResolution: new THREE.Uniform(new THREE.Vector2(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio))
-    }
-})
+let particles = null;
 
 // Points
-particles.points = new THREE.Points(particles.geometry, particles.material)
-scene.add(particles.points)
+gltfLoader.load('./models.glb', (gltf) => {
+    particles = {}
+
+    const positions = gltf.scene.children.map((child) => {
+        return child.geometry.attributes.position
+    })
+
+    particles.maxCount = 0;
+
+    for(const position of positions) {
+        if(position.count > particles.maxCount) {
+            particles.maxCount = position.count
+        }
+    }
+
+    particles.positions = []
+    for(const position of positions) {
+        const original = position.array
+        const newArray = new Float32Array(particles.maxCount * 3)
+
+        for(let i = 0; i < particles.maxCount; i++) {
+            const i3 = i * 3
+
+            if (i3 < original.length) {
+                newArray[i3] = original[i3]
+                newArray[i3 + 1] = original[i3 + 1]
+                newArray[i3 + 2] = original[i3 + 2]
+            }
+            else {
+                const randomIndex = Math.floor(position.count * Math.random()) * 3
+                newArray[i3] = original[randomIndex]
+                newArray[i3 + 1] = original[randomIndex + 1]
+                newArray[i3 + 2] = original[randomIndex + 2]
+            }
+        }
+        particles.positions.push(new THREE.Float32BufferAttribute(newArray, 3))
+    }
+
+// Geometry
+    particles.geometry = new THREE.SphereGeometry(3)
+
+// Material
+    particles.material = new THREE.ShaderMaterial({
+        vertexShader: particlesVertexShader,
+        fragmentShader: particlesFragmentShader,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        uniforms:
+            {
+                uSize: new THREE.Uniform(0.2),
+                uResolution: new THREE.Uniform(new THREE.Vector2(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio))
+            }
+    })
+    particles.geometry = new BufferGeometry()
+    particles.geometry.setAttribute('position', particles.positions[1])
+
+    particles.points = new THREE.Points(particles.geometry, particles.material)
+    scene.add(particles.points)
+})
 
 /**
  * Animate
