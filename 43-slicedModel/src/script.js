@@ -3,7 +3,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
+import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import GUI from 'lil-gui'
+import slicedVertexShader from './shaders/sliced/vertex.glsl'
+import slicedFragmentShader from './shaders/sliced/fragment.glsl'
 
 /**
  * Base
@@ -40,8 +43,10 @@ rgbeLoader.load('./aerodynamics_workshop.hdr', (environmentMap) =>
 /**
  * Sliced model
  */
-// Geometry
-const geometry = new THREE.IcosahedronGeometry(2.5, 5)
+const uniforms = {
+    uSliceStart: new THREE.Uniform(1.75),
+    uSliceArc: new THREE.Uniform(1.25),
+}
 
 // Material
 const material = new THREE.MeshStandardMaterial({
@@ -51,9 +56,69 @@ const material = new THREE.MeshStandardMaterial({
     color: '#858080'
 })
 
-// Mesh
-const mesh = new THREE.Mesh(geometry, material)
-scene.add(mesh)
+const patchMap = {
+    csm_Slice: {
+        '#include <colorspace_fragment>':
+            `
+                #include <colorspace_fragment>
+                if (!gl_FrontFacing) {
+                    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                }
+            `
+    }
+}
+
+const slicedMaterial = new CustomShaderMaterial({
+    //CSM
+    baseMaterial: THREE.MeshStandardMaterial,
+    vertexShader: slicedVertexShader,
+    fragmentShader: slicedFragmentShader,
+    patchMap: patchMap,
+
+    //base material
+    metalness: 0.5,
+    roughness: 0.25,
+    envMapIntensity: 0.5,
+    uniforms: uniforms,
+    color: '#858080',
+    side: THREE.DoubleSide
+})
+
+const sliceDepthMaterial = new CustomShaderMaterial({
+    //CSM
+    baseMaterial: THREE.MeshDepthMaterial,
+    vertexShader: slicedVertexShader,
+    fragmentShader: slicedFragmentShader,
+    uniforms: uniforms,
+    patchMap: patchMap,
+
+    //base material
+    depthPacking: THREE.RGBADepthPacking
+})
+
+gui.add(uniforms.uSliceStart, 'value').min(-Math.PI).max(Math.PI).step(0.001).name('uSliceStart')
+gui.add(uniforms.uSliceArc, 'value').min(0).max(Math.PI * 2).step(0.001).name('uSliceArc')
+
+
+let model = null
+
+//model
+gltfLoader.load('./gears.glb', (gltf) => {
+    model = gltf.scene
+    model.traverse((child) => {
+        if (child.isMesh) {
+            if (child.name === 'outerHull') {
+                child.material = slicedMaterial
+                child.customDepthMaterial = sliceDepthMaterial
+            } else {
+                child.material = material
+            }
+            child.castShadow = true
+            child.recieveShadow = true
+        }
+    })
+    scene.add(model)
+})
 
 /**
  * Plane
@@ -135,6 +200,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(sizes.pixelRatio)
+// renderer.outputColorSpace = THREE.LinearSRGBColorSpace
 
 /**
  * Animate
@@ -144,6 +210,9 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    if (model) {
+        model.rotation.y = elapsedTime * 0.1
+    }
 
     // Update controls
     controls.update()
