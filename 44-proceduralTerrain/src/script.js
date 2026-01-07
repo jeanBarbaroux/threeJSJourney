@@ -37,18 +37,50 @@ rgbeLoader.load('/spruit_sunrise.hdr', (environmentMap) =>
 /**
  * Terrain
  */
+debugObject.colorWaterDeep = '#002b3d'
+debugObject.colorWaterSurface = '#66a8ff'
+debugObject.colorSand = '#ffe894'
+debugObject.colorGrass = '#85d534'
+debugObject.colorSnow = '#ffffff'
+debugObject.colorRock = '#bfbd8d'
+
 const uniforms = {
     uTime: new THREE.Uniform(0),
     uPositionFrequency: new THREE.Uniform( 0.2),
     uStrength:  new THREE.Uniform(2),
     uWarpFrequency:  new THREE.Uniform(5),
-    uWarpStrength:  new THREE.Uniform(0.5)
+    uWarpStrength:  new THREE.Uniform(0.5),
+    uColorWaterDeep : new THREE.Uniform(new THREE.Color(debugObject.colorWaterDeep)),
+    uColorWaterSurface : new THREE.Uniform(new THREE.Color(debugObject.colorWaterSurface)),
+    uColorSand : new THREE.Uniform(new THREE.Color(debugObject.colorSand)),
+    uColorGrass : new THREE.Uniform(new THREE.Color(debugObject.colorGrass)),
+    uColorSnow : new THREE.Uniform(new THREE.Color(debugObject.colorSnow)),
+    uColorRock : new THREE.Uniform(new THREE.Color(debugObject.colorRock)),
 }
 
 gui.add(uniforms.uPositionFrequency, 'value').min(0).max(1).step(0.01).name('uPositionFrequency')
 gui.add(uniforms.uStrength, 'value').min(0).max(10).step(0.01).name('uStrength')
 gui.add(uniforms.uWarpFrequency, 'value').min(0).max(10).step(0.01).name('uWarpFrequency')
 gui.add(uniforms.uWarpStrength, 'value').min(1).max(5).step(0.01).name('uWarpStrength')
+
+gui.addColor(debugObject, 'colorWaterDeep').onChange(() => {
+    uniforms.uColorWaterDeep.value.set(debugObject.colorWaterDeep)
+})
+gui.addColor(debugObject, 'colorWaterSurface').onChange(() => {
+    uniforms.uColorWaterSurface.value.set(debugObject.colorWaterSurface)
+})
+gui.addColor(debugObject, 'colorSand').onChange(() => {
+    uniforms.uColorSand.value.set(debugObject.colorSand)
+})
+gui.addColor(debugObject, 'colorGrass').onChange(() => {
+    uniforms.uColorGrass.value.set(debugObject.colorGrass)
+})
+gui.addColor(debugObject, 'colorSnow').onChange(() => {
+    uniforms.uColorSnow.value.set(debugObject.colorSnow)
+})
+gui.addColor(debugObject, 'colorRock').onChange(() => {
+    uniforms.uColorRock.value.set(debugObject.colorRock)
+})
 
 const geometry = new THREE.PlaneGeometry(10, 10, 500, 500)
 const material = new CustomShaderMaterial( {
@@ -80,6 +112,17 @@ terrain.receiveShadow = true
 terrain.castShadow = true
 terrain.customDepthMaterial = depthMaterial
 scene.add(terrain)
+
+const water = new THREE.Mesh(
+    new THREE.PlaneGeometry(10, 10, 1, 1),
+    new THREE.MeshPhysicalMaterial({
+        transmission: 1,
+        roughness: 0.3
+    })
+)
+water.rotateX(-Math.PI * 0.5)
+water.position.y = -0.1
+scene.add(water)
 
 /**
  * Board
