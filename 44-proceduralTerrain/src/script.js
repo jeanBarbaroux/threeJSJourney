@@ -3,6 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
 import GUI from 'lil-gui'
+import CustomShaderMaterial from "three-custom-shader-material/vanilla";
+import terrainVertexShader from './shaders/terrain/vertex.glsl'
+import terrainFragmentShader from './shaders/terrain/fragment.glsl'
 
 /**
  * Base
@@ -31,15 +34,52 @@ rgbeLoader.load('/spruit_sunrise.hdr', (environmentMap) =>
     scene.backgroundBlurriness = 0.5
     scene.environment = environmentMap
 })
-
 /**
- * Placeholder
+ * Terrain
  */
-const placeholder = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(2, 5),
-    new THREE.MeshPhysicalMaterial()
-)
-scene.add(placeholder)
+const uniforms = {
+    uTime: new THREE.Uniform(0),
+    uPositionFrequency: new THREE.Uniform( 0.2),
+    uStrength:  new THREE.Uniform(2),
+    uWarpFrequency:  new THREE.Uniform(5),
+    uWarpStrength:  new THREE.Uniform(0.5)
+}
+
+gui.add(uniforms.uPositionFrequency, 'value').min(0).max(1).step(0.01).name('uPositionFrequency')
+gui.add(uniforms.uStrength, 'value').min(0).max(10).step(0.01).name('uStrength')
+gui.add(uniforms.uWarpFrequency, 'value').min(0).max(10).step(0.01).name('uWarpFrequency')
+gui.add(uniforms.uWarpStrength, 'value').min(1).max(5).step(0.01).name('uWarpStrength')
+
+const geometry = new THREE.PlaneGeometry(10, 10, 500, 500)
+const material = new CustomShaderMaterial( {
+    baseMaterial: THREE.MeshStandardMaterial,
+    vertexShader: terrainVertexShader,
+    fragmentShader: terrainFragmentShader,
+    uniforms: uniforms,
+
+    //standard
+    metalness: 0,
+    roughness: 0.5,
+    color: '#85d534'
+})
+
+const depthMaterial = new CustomShaderMaterial({
+    baseMaterial: THREE.MeshDepthMaterial,
+    vertexShader: terrainVertexShader,
+    uniforms: uniforms,
+
+    depthPacking: THREE.RGBADepthPacking
+})
+
+
+const terrain = new THREE.Mesh(geometry, material)
+geometry.deleteAttribute('uv')
+geometry.deleteAttribute('normal')
+geometry.rotateX(-Math.PI * 0.5)
+terrain.receiveShadow = true
+terrain.castShadow = true
+terrain.customDepthMaterial = depthMaterial
+scene.add(terrain)
 
 /**
  * Board
@@ -48,6 +88,10 @@ const boardFill = new Brush(new THREE.BoxGeometry(11,2, 11))
 const boardHole = new Brush(new THREE.BoxGeometry(10,2.1, 10))
 const evaluator = new Evaluator()
 const board = evaluator.evaluate(boardFill, boardHole, SUBTRACTION)
+board.geometry.clearGroups()
+board.material = new THREE.MeshStandardMaterial({color: '#ffffff', metalness: 0, roughness: 0.3})
+board.castShadow = true
+board.receiveShadow = true
 scene.add(board)
 
 /**
@@ -124,6 +168,7 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    uniforms.uTime.value = elapsedTime
 
     // Update controls
     controls.update()

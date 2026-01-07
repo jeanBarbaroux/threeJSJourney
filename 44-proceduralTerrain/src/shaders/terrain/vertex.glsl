@@ -1,0 +1,38 @@
+uniform float uPositionFrequency;
+uniform float uStrength;
+uniform float uWarpFrequency;
+uniform float uWarpStrength;
+uniform float uTime;
+
+#include ../includes/simplexNoise2d.glsl
+
+float getElevation(vec2 position) {
+
+    vec2 warpedPosition = position;
+    warpedPosition += uTime * .2;
+    warpedPosition += simplexNoise2d(warpedPosition * uPositionFrequency * uWarpFrequency) * uWarpStrength;
+
+    float elevation = simplexNoise2d(warpedPosition * uPositionFrequency) / 2.;
+    elevation += simplexNoise2d(warpedPosition * uPositionFrequency * 2.) / 4.;
+    elevation += simplexNoise2d(warpedPosition * uPositionFrequency * 4.) / 8.;
+    float elevationSign = sign(elevation);
+    elevation = pow(abs(elevation), 2.0) * elevationSign;
+    elevation *= uStrength;
+    return elevation;
+}
+
+void main() {
+    //neighbour position
+    float shift = .01;
+    vec3 positionA = position + vec3(shift, 0., 0.);
+    vec3 positionB = position + vec3(0., 0., -shift);
+
+    float elevation = getElevation(csm_Position.xz);
+    csm_Position.y += elevation;
+    positionA.y += getElevation(positionA.xz);
+    positionB.y += getElevation(positionB.xz);
+
+    vec3 toA = normalize(positionA - csm_Position);
+    vec3 toB = normalize(positionB - csm_Position);
+    csm_Normal = cross(toA, toB);
+}
