@@ -8,7 +8,7 @@ import {
     GlitchPass,
     RenderPass,
     RGBShiftShader,
-    ShaderPass
+    ShaderPass, UnrealBloomPass
 } from "three/addons";
 import GUI from 'lil-gui'
 
@@ -110,6 +110,10 @@ window.addEventListener('resize', () =>
     // Update renderer
     renderer.setSize(sizes.width, sizes.height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
+    effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    effectComposer.setSize(sizes.width, sizes.height)
+
 })
 
 /**
@@ -139,9 +143,20 @@ renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 /**
+ * Render Target
+ */
+const renderTarget = new THREE.WebGLRenderTarget(
+    800,
+    600,
+    {
+        samples: renderer.getPixelRatio() === 1 ? 2: 0
+    }
+)
+
+/**
  * Post Processing
  */
-const effectComposer = new EffectComposer(renderer)
+const effectComposer = new EffectComposer(renderer, renderTarget)
 effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 effectComposer.setSize(sizes.width, sizes.height)
 
@@ -152,13 +167,20 @@ const dotScreenPass = new DotScreenPass()
 effectComposer.addPass(dotScreenPass)
 dotScreenPass.enabled = false
 
-const gtlitchPass = new GlitchPass()
-effectComposer.addPass(gtlitchPass)
-gtlitchPass.enabled = false
+const glitchPass = new GlitchPass()
+effectComposer.addPass(glitchPass)
+glitchPass.enabled = false
 
 const rgbShiftPass = new ShaderPass(RGBShiftShader)
 effectComposer.addPass(rgbShiftPass)
-rgbShiftPass.enabled = true
+rgbShiftPass.enabled = false
+
+const unrealBloomPass = new UnrealBloomPass()
+unrealBloomPass.strength = 0.5
+unrealBloomPass.radius = 1
+unrealBloomPass.threshold = 0.6
+effectComposer.addPass(unrealBloomPass)
+unrealBloomPass.enabled = false
 
 /**
  * Last Pass to correct the colors
