@@ -3,6 +3,8 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import portalVertexShader from './shaders/vertex.glsl'
+import portalFragmentShader from './shaders/fragment.glsl'
 
 /**
  * Base
@@ -35,7 +37,7 @@ gltfLoader.setDRACOLoader(dracoLoader)
 /**
  * Textures
  */
-const bakedTexture = textureLoader.load('baked.jpg')
+const bakedTexture = textureLoader.load('bakedPortal.jpg')
 bakedTexture.flipY = false
 bakedTexture.colorSpace = THREE.SRGBColorSpace
 
@@ -54,23 +56,41 @@ const portalLightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })
 /**
  * Model
  */
+
+const debug = {}
+debug.poleLightMaterial = new THREE.MeshBasicMaterial({color: "#ffffe5"})
+debug.portalMaterial = new THREE.ShaderMaterial({
+    vertexShader: portalVertexShader,
+    fragmentShader: portalFragmentShader,
+    uniforms: {
+        uTime: new THREE.Uniform(0),
+        uBaseColor: new THREE.Uniform(new THREE.Color('#e2cbfb')),
+        uSpeed: new THREE.Uniform(1),
+        uStrength: new THREE.Uniform(5),
+        uDistance: new THREE.Uniform(1.4)
+    },
+    side: THREE.DoubleSide,
+    transparent: true
+})
+
+gui.add(debug.portalMaterial.uniforms.uSpeed, 'value').min(0).max(10).step(0.01)
+gui.add(debug.portalMaterial.uniforms.uStrength, 'value').min(0).max(50).step(0.01)
+gui.add(debug.portalMaterial.uniforms.uDistance, 'value').min(0).max(10).step(0.01)
+
 gltfLoader.load(
-    'portal.glb',
+    'PortalScene2.glb',
     (gltf) =>
     {
+        gltf.scene.traverse((child) => {
+            if (child.name === 'Cube012' || child.name === 'Cube017') {
+                child.material = debug.poleLightMaterial
+            } else if (child.name === 'Circle') {
+                child.material = debug.portalMaterial
+            } else {
+                child.material = bakedMaterial
+            }
+        })
         scene.add(gltf.scene)
-
-        // Get each object
-        const bakedMesh = gltf.scene.children.find((child) => child.name === 'baked')
-        const portalLightMesh = gltf.scene.children.find((child) => child.name === 'portalLight')
-        const poleLightAMesh = gltf.scene.children.find((child) => child.name === 'poleLightA')
-        const poleLightBMesh = gltf.scene.children.find((child) => child.name === 'poleLightB')
-
-        // Apply materials
-        bakedMesh.material = bakedMaterial
-        portalLightMesh.material = portalLightMaterial
-        poleLightAMesh.material = poleLightMaterial
-        poleLightBMesh.material = poleLightMaterial
     }
 )
 
@@ -121,6 +141,14 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
+debug.clearColor = '#343833'
+renderer.setClearColor(debug.clearColor)
+gui
+    .addColor(debug, 'clearColor')
+    .onChange(() =>
+    {
+        renderer.setClearColor(debug.clearColor)
+    })
 /**
  * Animate
  */
@@ -129,6 +157,7 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    debug.portalMaterial.uniforms.uTime.value = elapsedTime
 
     // Update controls
     controls.update()
