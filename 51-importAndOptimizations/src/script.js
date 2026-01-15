@@ -48,6 +48,7 @@ debug.portalMaterial = new THREE.MeshBasicMaterial({color: "#e2cbfb"})
 
 gltfLoader.load('./PortalScene2.glb', (gltf) => {
     gltf.scene.traverse((child) => {
+        console.log(gltf.scene)
         if (child.name === 'Cube012' || child.name === 'Cube017') {
             child.material = debug.poleLightMaterial
         } else if (child.name === 'Circle') {
